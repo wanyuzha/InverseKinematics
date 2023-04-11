@@ -76,11 +76,27 @@ void Skinning::applySkinning(const RigidTransform4d * jointSkinTransforms, doubl
   // Students should implement this
 
   // The following below is just a dummy implementation.
-  for(int i=0; i<numMeshVertices; i++)
+  for(int vtxID=0; vtxID<numMeshVertices; vtxID++)
   {
-    newMeshVertexPositions[3 * i + 0] = restMeshVertexPositions[3 * i + 0];
-    newMeshVertexPositions[3 * i + 1] = restMeshVertexPositions[3 * i + 1];
-    newMeshVertexPositions[3 * i + 2] = restMeshVertexPositions[3 * i + 2];
+    newMeshVertexPositions[3 * vtxID + 0] = 0;
+    newMeshVertexPositions[3 * vtxID + 1] = 0;
+    newMeshVertexPositions[3 * vtxID + 2] = 0;
+    Vec4d restVecHomogeneous = { restMeshVertexPositions[3 * vtxID + 0], restMeshVertexPositions[3 * vtxID + 1], restMeshVertexPositions[3 * vtxID + 2], 1 };
+    Vec4d skinVec = { 0, 0, 0, 0 };
+    // use meshSkinningJoints and meshSkinningWeights to update weights
+    for (int i = 0; i < numJointsInfluencingEachVertex; i++)
+    {
+        int tempID = meshSkinningJoints[vtxID * numJointsInfluencingEachVertex + i];
+        double tempWeight = meshSkinningWeights[vtxID * numJointsInfluencingEachVertex + i];
+        
+        if (tempWeight > 0.0)
+        {
+            skinVec += tempWeight * jointSkinTransforms[tempID] * restVecHomogeneous;
+        }
+    }
+    newMeshVertexPositions[3 * vtxID + 0] = skinVec[0];
+    newMeshVertexPositions[3 * vtxID + 1] = skinVec[1];
+    newMeshVertexPositions[3 * vtxID + 2] = skinVec[2];
   }
 }
 
