@@ -186,6 +186,7 @@ vector<int> FK::getJointDescendents(int jointID) const
   return ret;
 }
 
+
 // This is the main function that performs forward kinematics.
 // Each joint has its local transformation relative to the parent joint. 
 // globalTransform of a joint is the transformation that converts a point expressed in the joint's local frame of reference, to the world coordinate frame.
@@ -222,6 +223,29 @@ void FK::computeLocalAndGlobalTransforms(
   {
     localTransforms[i] = RigidTransform4d(identity);
     globalTransforms[i] = RigidTransform4d(identity);
+  }
+  // updating from given order, parent first, children second
+  // initializing from the root 
+  for (int i = 0; i < jointUpdateOrder.size(); i++)
+  {
+      double orientRotationMatrix[9], localRotationMatrix[9];
+      // parent joint
+      if (i == 0)
+      {
+          euler2Rotation(jointOrientationEulerAngles[i], orientRotationMatrix, RotateOrder::XYZ);
+          euler2Rotation(eulerAngles[i], localRotationMatrix, rotateOrders[i]);
+          RigidTransform4d rootTransform4d = RigidTransform4d(Mat3d(orientRotationMatrix) * Mat3d(localRotationMatrix), translations[i]);
+          localTransforms[i] = rootTransform4d;
+          globalTransforms[i] = rootTransform4d;
+      }
+      else
+      {
+          euler2Rotation(jointOrientationEulerAngles[i], orientRotationMatrix, RotateOrder::XYZ);
+          euler2Rotation(eulerAngles[i], localRotationMatrix, rotateOrders[i]);
+          localTransforms[i] = RigidTransform4d(Mat3d(orientRotationMatrix) * Mat3d(localRotationMatrix), translations[i]);
+          int jointParent = jointParents[i];
+          globalTransforms[i] = globalTransforms[jointParent] * localTransforms[i];
+      }
   }
 }
 
