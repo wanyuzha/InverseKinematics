@@ -68,15 +68,16 @@ void forwardKinematicsFunction(
   // so that code is only written once. We considered this; but it is actually not easily doable.
   // If you find a good approach, feel free to document it in the README file, for extra credit.
     
-    std::vector<Mat3<adouble>>    globalRotationMatrixAdouble;
-    std::vector<Vec3<adouble>>    globalTranslationAdouble;
+    std::vector<Mat3<real>>    globalRotationMatrixAdouble;
+    std::vector<Vec3<real>>    globalTranslationAdouble;
     globalRotationMatrixAdouble.resize(fk.getNumJoints());
     globalTranslationAdouble.resize(fk.getNumJoints());
   for (int traverse = 0; traverse < fk.getNumJoints(); traverse++)
   {
       int i = fk.getJointUpdateOrder(traverse);
-      adouble orientEulerAngles[3];
-      Mat3<adouble> orientRotationMatrix, localRotationMatrix;
+      real orientEulerAngles[3];
+      Mat3<real> orientRotationMatrix;
+      Mat3<real> localRotationMatrix;
       // parent joint
       if (i == 0)
       {
@@ -84,13 +85,13 @@ void forwardKinematicsFunction(
           Vec3d tempD = fk.getJointOrient(i);
           orientEulerAngles[0] = tempD[0]; orientEulerAngles[1] = tempD[1]; orientEulerAngles[2] = tempD[2];
 
-          orientRotationMatrix = Euler2Rotation<adouble>(orientEulerAngles, RotateOrder::XYZ);
-          adouble eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3+1] , eulerAngles[i*3+2]};
-          localRotationMatrix = Euler2Rotation<adouble>(eulerA, fk.getJointRotateOrder(i));
+          orientRotationMatrix = Euler2Rotation(orientEulerAngles, RotateOrder::XYZ);
+          real eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3+1] , eulerAngles[i*3+2]};
+          localRotationMatrix = Euler2Rotation(eulerA, fk.getJointRotateOrder(i));
 
           globalRotationMatrixAdouble[i] = orientRotationMatrix * localRotationMatrix;
           tempD = fk.getJointRestTranslation(i);
-          globalTranslationAdouble[i].set<double>(tempD);
+          globalTranslationAdouble[i][0] = tempD[0]; globalTranslationAdouble[i][1] = tempD[1]; globalTranslationAdouble[i][2] = tempD[2];
       }
       else
       {
@@ -98,13 +99,13 @@ void forwardKinematicsFunction(
           Vec3d tempD = fk.getJointOrient(i);
           orientEulerAngles[0] = tempD[0]; orientEulerAngles[1] = tempD[1]; orientEulerAngles[2] = tempD[2];
 
-          orientRotationMatrix = Euler2Rotation<adouble>(orientEulerAngles, RotateOrder::XYZ);
-          adouble eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3 + 1] , eulerAngles[i*3 + 2] };
-          localRotationMatrix = Euler2Rotation<adouble>(eulerA, fk.getJointRotateOrder(i));
+          orientRotationMatrix = Euler2Rotation(orientEulerAngles, RotateOrder::XYZ);
+          real eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3 + 1] , eulerAngles[i*3 + 2] };
+          localRotationMatrix = Euler2Rotation(eulerA, fk.getJointRotateOrder(i));
 
-          Vec3<adouble> localTranslationAdouble;
+          Vec3<real> localTranslationAdouble;
           tempD = fk.getJointRestTranslation(i);
-          localTranslationAdouble.set<double>(tempD);
+          localTranslationAdouble[0] = tempD[0]; localTranslationAdouble[1] = tempD[1]; localTranslationAdouble[2] = tempD[2];
 
           int jointParent = fk.getJointParent(i);
           multiplyAffineTransform4ds(globalRotationMatrixAdouble[jointParent], globalTranslationAdouble[jointParent], orientRotationMatrix * localRotationMatrix,
@@ -237,17 +238,16 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
     {
         for (int j = 0; j < FKInputDim; j++)
         {
-            J(i, j) = jacobian[i * FKOutputDim + j];
+            J(i, j) = jacobian[i * FKInputDim + j];
         }
     }
-
     Eigen::MatrixXd A = J.transpose()* J + 0.01 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
     Eigen::VectorXd x = A.ldlt().solve(J.transpose() * b);
     for (int i = 0; i < numJoints; i++)
     {
-        jointEulerAngles[i][0] = x(i * 3);
-        jointEulerAngles[i][1] = x(i * 3 + 1);
-        jointEulerAngles[i][2] = x(i * 3 + 2);
+        jointEulerAngles[i][0] += x(i * 3);
+        jointEulerAngles[i][1] += x(i * 3 + 1);
+        jointEulerAngles[i][2] += x(i * 3 + 2);
     }
 
   delete[] input;
