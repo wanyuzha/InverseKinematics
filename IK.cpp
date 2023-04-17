@@ -67,6 +67,59 @@ void forwardKinematicsFunction(
   // It would be in principle possible to unify this "forwardKinematicsFunction" and FK::computeLocalAndGlobalTransforms(),
   // so that code is only written once. We considered this; but it is actually not easily doable.
   // If you find a good approach, feel free to document it in the README file, for extra credit.
+    
+    std::vector<Mat3<adouble>>    globalRotationMatrixAdouble;
+    std::vector<Vec3<adouble>>    globalTranslationAdouble;
+    globalRotationMatrixAdouble.resize(fk.getNumJoints());
+    globalTranslationAdouble.resize(fk.getNumJoints());
+  for (int traverse = 0; traverse < fk.getNumJoints(); traverse++)
+  {
+      int i = fk.getJointUpdateOrder(traverse);
+      adouble orientEulerAngles[3];
+      Mat3<adouble> orientRotationMatrix, localRotationMatrix;
+      // parent joint
+      if (i == 0)
+      {
+          //get from orient and local euler angles fk class
+          Vec3d tempD = fk.getJointOrient(i);
+          orientEulerAngles[0] = tempD[0]; orientEulerAngles[1] = tempD[1]; orientEulerAngles[2] = tempD[2];
+
+          orientRotationMatrix = Euler2Rotation<adouble>(orientEulerAngles, RotateOrder::XYZ);
+          adouble eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3+1] , eulerAngles[i*3+2]};
+          localRotationMatrix = Euler2Rotation<adouble>(eulerA, fk.getJointRotateOrder(i));
+
+          globalRotationMatrixAdouble[i] = orientRotationMatrix * localRotationMatrix;
+          tempD = fk.getJointRestTranslation(i);
+          globalTranslationAdouble[i].set<double>(tempD);
+      }
+      else
+      {
+          //get from orient and local euler angles fk class
+          Vec3d tempD = fk.getJointOrient(i);
+          orientEulerAngles[0] = tempD[0]; orientEulerAngles[1] = tempD[1]; orientEulerAngles[2] = tempD[2];
+
+          orientRotationMatrix = Euler2Rotation<adouble>(orientEulerAngles, RotateOrder::XYZ);
+          adouble eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3 + 1] , eulerAngles[i*3 + 2] };
+          localRotationMatrix = Euler2Rotation<adouble>(eulerA, fk.getJointRotateOrder(i));
+
+          Vec3<adouble> localTranslationAdouble;
+          tempD = fk.getJointRestTranslation(i);
+          localTranslationAdouble.set<double>(tempD);
+
+          int jointParent = fk.getJointParent(i);
+          multiplyAffineTransform4ds(globalRotationMatrixAdouble[jointParent], globalTranslationAdouble[jointParent], orientRotationMatrix * localRotationMatrix,
+              localTranslationAdouble, globalRotationMatrixAdouble[i], globalTranslationAdouble[i]);
+      }
+  }
+
+    // getting handle positions from fk globalMatrix
+    for (int i = 0; i < numIKJoints; i++)
+    {
+        int IKID = IKJointIDs[i];
+        handlePositions[i*3] = globalTranslationAdouble[IKID][0];
+        handlePositions[i*3+1] = globalTranslationAdouble[IKID][1];
+        handlePositions[i*3+2] = globalTranslationAdouble[IKID][2];
+    }
 }
 
 } // end anonymous namespaces
@@ -93,20 +146,113 @@ void IK::train_adolc()
   //   This will later make it possible for you to compute the gradient of this function in IK::doIK
   //   (in other words, compute the "Jacobian matrix" J).
   // See ADOLCExample.cpp .
+    trace_on(adolc_tagID);
+    vector<adouble> eulerAngles(FKInputDim);
+    for (int i = 0; i < FKInputDim; i++)
+    {
+        eulerAngles[i] <<= 0.0;
+    }
+    vector<adouble> handlePositions(FKOutputDim);
+    forwardKinematicsFunction(numIKJoints, IKJointIDs, *fk, eulerAngles, handlePositions);
+    vector<double> output(FKOutputDim);
+    for (int i = 0; i < FKOutputDim; i++)
+    {
+        handlePositions[i] >>= output[i];
+    }
+    trace_off();
+
 }
 
-void IK::doIK(const Vec3d * targetHandlePositions, Vec3d * jointEulerAngles)
+void IK::train_adolc_test()
 {
-  // You may find the following helpful:
-  int numJoints = fk->getNumJoints(); // Note that is NOT the same as numIKJoints!
+    // Students should implement this.
+    // Here, you should setup adol_c:
+    //   Define adol_c inputs and outputs. 
+    //   Use the "forwardKinematicsFunction" as the function that will be computed by adol_c.
+    //   This will later make it possible for you to compute the gradient of this function in IK::doIK
+    //   (in other words, compute the "Jacobian matrix" J).
+    // See ADOLCExample.cpp .
+    int n = 3; // input dimension is n
+    int m = 2; // output dimension is m
+    trace_on(adolc_tagID);
+    vector<adouble> x(n); // define the input of the function f
+    for (int i = 0; i < n; i++)
+        x[i] <<= 0.0; // The <<= syntax tells ADOL-C that these are the input variables.
 
-  // Students should implement this.
-  // Use adolc to evalute the forwardKinematicsFunction and its gradient (Jacobian). It was trained in train_adolc().
-  // Specifically, use ::function, and ::jacobian .
-  // See ADOLCExample.cpp .
-  //
-  // Use it implement the Tikhonov IK method (or the pseudoinverse method for extra credit).
-  // Note that at entry, "jointEulerAngles" contains the input Euler angles. 
-  // Upon exit, jointEulerAngles should contain the new Euler angles.
+    vector<adouble> y(m); // define the output of the function f
+
+    // The computation of f goes here:
+    y[0] = x[0] + 2 * x[1] + 3 * x[2];
+    y[1] = 4 * x[0] + 5 * x[1];
+
+    vector<double> output(m);
+    for (int i = 0; i < m; i++)
+        y[i] >>= output[i]; // Use >>= to tell ADOL-C that y[i] are the output variables
+
+    trace_off();
+
+}
+
+void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
+{
+    // You may find the following helpful:
+    int numJoints = fk->getNumJoints(); // Note that is NOT the same as numIKJoints!
+
+    // Students should implement this.
+    // Use adolc to evalute the forwardKinematicsFunction and its gradient (Jacobian). It was trained in train_adolc().
+    // Specifically, use ::function, and ::jacobian .
+    // See ADOLCExample.cpp .
+    //
+    // Use it implement the Tikhonov IK method (or the pseudoinverse method for extra credit).
+    // Note that at entry, "jointEulerAngles" contains the input Euler angles. 
+    // Upon exit, jointEulerAngles should contain the new Euler angles.
+    
+    double* input = new double[FKInputDim];
+    for (int i = 0; i < numJoints; i++)
+    {
+        input[i*3] = jointEulerAngles[i][0];
+        input[i*3 + 1] = jointEulerAngles[i][1];
+        input[i*3 + 2] = jointEulerAngles[i][2];
+    }
+    double* output = new double[FKOutputDim];
+    ::function(adolc_tagID, FKOutputDim, FKInputDim, input, output);
+    Eigen::VectorXd b(FKOutputDim);
+    for (int i = 0; i < numIKJoints; i++)
+    {
+        b(i * 3) = targetHandlePositions[i][0] - output[i * 3];
+        b(i * 3 + 1) = targetHandlePositions[i][1] - output[i * 3 + 1];
+        b(i * 3 + 2) = targetHandlePositions[i][2] - output[i * 3 + 2];
+    }
+
+    double* jacobian = new double[FKOutputDim * FKInputDim];
+    double** jRow = new double*[FKOutputDim];
+    for (int i = 0; i < FKOutputDim; i++)
+    {
+        jRow[i] = &jacobian[FKInputDim * i];
+    }
+    ::jacobian(adolc_tagID, FKOutputDim, FKInputDim, input, jRow);
+
+    Eigen::MatrixXd J(FKOutputDim, FKInputDim);
+    for (int i = 0; i < FKOutputDim; i++)
+    {
+        for (int j = 0; j < FKInputDim; j++)
+        {
+            J(i, j) = jacobian[i * FKOutputDim + j];
+        }
+    }
+
+    Eigen::MatrixXd A = J.transpose()* J + 0.01 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
+    Eigen::VectorXd x = A.ldlt().solve(J.transpose() * b);
+    for (int i = 0; i < numJoints; i++)
+    {
+        jointEulerAngles[i][0] = x(i * 3);
+        jointEulerAngles[i][1] = x(i * 3 + 1);
+        jointEulerAngles[i][2] = x(i * 3 + 2);
+    }
+
+  delete[] input;
+  delete[] output;
+  delete[] jacobian;
+  delete[] jRow;
 }
 

@@ -41,6 +41,7 @@ protected:
   int FKOutputDim = 0; // forward dynamics output dimension
 
   void train_adolc();
+  void train_adolc_test();
 };
 
 #endif
