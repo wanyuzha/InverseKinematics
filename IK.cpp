@@ -208,46 +208,53 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
     // Note that at entry, "jointEulerAngles" contains the input Euler angles. 
     // Upon exit, jointEulerAngles should contain the new Euler angles.
     
+    // setting step
     double* input = new double[FKInputDim];
-    for (int i = 0; i < numJoints; i++)
-    {
-        input[i*3] = jointEulerAngles[i][0];
-        input[i*3 + 1] = jointEulerAngles[i][1];
-        input[i*3 + 2] = jointEulerAngles[i][2];
-    }
     double* output = new double[FKOutputDim];
-    ::function(adolc_tagID, FKOutputDim, FKInputDim, input, output);
-    Eigen::VectorXd b(FKOutputDim);
-    for (int i = 0; i < numIKJoints; i++)
-    {
-        b(i * 3) = targetHandlePositions[i][0] - output[i * 3];
-        b(i * 3 + 1) = targetHandlePositions[i][1] - output[i * 3 + 1];
-        b(i * 3 + 2) = targetHandlePositions[i][2] - output[i * 3 + 2];
-    }
-
     double* jacobian = new double[FKOutputDim * FKInputDim];
-    double** jRow = new double*[FKOutputDim];
+    double** jRow = new double* [FKOutputDim];
     for (int i = 0; i < FKOutputDim; i++)
     {
         jRow[i] = &jacobian[FKInputDim * i];
     }
-    ::jacobian(adolc_tagID, FKOutputDim, FKInputDim, input, jRow);
 
-    Eigen::MatrixXd J(FKOutputDim, FKInputDim);
-    for (int i = 0; i < FKOutputDim; i++)
+    int N = 5;
+    for (int step = 0; step < N; step++)
     {
-        for (int j = 0; j < FKInputDim; j++)
+        for (int i = 0; i < numJoints; i++)
         {
-            J(i, j) = jacobian[i * FKInputDim + j];
+            input[i * 3] = jointEulerAngles[i][0];
+            input[i * 3 + 1] = jointEulerAngles[i][1];
+            input[i * 3 + 2] = jointEulerAngles[i][2];
         }
-    }
-    Eigen::MatrixXd A = J.transpose()* J + 0.01 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
-    Eigen::VectorXd x = A.ldlt().solve(J.transpose() * b);
-    for (int i = 0; i < numJoints; i++)
-    {
-        jointEulerAngles[i][0] += x(i * 3);
-        jointEulerAngles[i][1] += x(i * 3 + 1);
-        jointEulerAngles[i][2] += x(i * 3 + 2);
+
+        ::function(adolc_tagID, FKOutputDim, FKInputDim, input, output);
+        Eigen::VectorXd b(FKOutputDim);
+        for (int i = 0; i < numIKJoints; i++)
+        {
+            b(i * 3) = (targetHandlePositions[i][0] - output[i * 3])/N;
+            b(i * 3 + 1) = (targetHandlePositions[i][1] - output[i * 3 + 1])/N;
+            b(i * 3 + 2) = (targetHandlePositions[i][2] - output[i * 3 + 2])/N;
+        }
+
+        ::jacobian(adolc_tagID, FKOutputDim, FKInputDim, input, jRow);
+
+        Eigen::MatrixXd J(FKOutputDim, FKInputDim);
+        for (int i = 0; i < FKOutputDim; i++)
+        {
+            for (int j = 0; j < FKInputDim; j++)
+            {
+                J(i, j) = jacobian[i * FKInputDim + j];
+            }
+        }
+        Eigen::MatrixXd A = J.transpose() * J + 0.01 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
+        Eigen::VectorXd x = A.ldlt().solve(J.transpose() * b);
+        for (int i = 0; i < numJoints; i++)
+        {
+            jointEulerAngles[i][0] += x(i * 3);
+            jointEulerAngles[i][1] += x(i * 3 + 1);
+            jointEulerAngles[i][2] += x(i * 3 + 2);
+        }
     }
 
   delete[] input;
