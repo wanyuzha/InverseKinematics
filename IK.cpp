@@ -249,8 +249,9 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
                 J(i, j) = jacobian[i * FKInputDim + j];
             }
         }
-        Eigen::MatrixXd A = J.transpose() * J + 0.0001 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
+        Eigen::MatrixXd A = J.transpose() * J + 0.001 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
         Eigen::VectorXd x = A.ldlt().solve(J.transpose() * b);
+        //Eigen::VectorXd x = J.transpose() * (J * J.transpose()).inverse() * b;
         for (int i = 0; i < numJoints; i++)
         {
             jointEulerAngles[i][0] += x(i * 3);
