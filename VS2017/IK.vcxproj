@@ -128,6 +128,7 @@
     <ClCompile Include="..\driver.cpp" />
     <ClCompile Include="..\FK.cpp" />
     <ClCompile Include="..\IK.cpp" />
+    <ClCompile Include="..\quaternion.cpp" />
     <ClCompile Include="..\skeletonRenderer.cpp" />
     <ClCompile Include="..\skinning.cpp" />
     <ClCompile Include="..\vega\averagingBuffer.cpp" />
@@ -151,9 +152,11 @@
     <ClCompile Include="..\vega\vec3d.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\dual_quaternion.h" />
     <ClInclude Include="..\FK.h" />
     <ClInclude Include="..\IK.h" />
     <ClInclude Include="..\minivectorTemplate.h" />
+    <ClInclude Include="..\quaternion.h" />
     <ClInclude Include="..\skeletonRenderer.h" />
     <ClInclude Include="..\skinning.h" />
     <ClInclude Include="..\vega\averagingBuffer.h" />

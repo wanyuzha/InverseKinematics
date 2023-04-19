@@ -26,6 +26,14 @@ public:
   // Note: eulerAngles is both input and output
   void doIK(const Vec3d * targetHandlePositions, Vec3d * eulerAngles);
 
+  ~IK()
+  {
+	  delete[] input;
+	  delete[] output;
+	  delete[] jacobian;
+	  delete[] jRow;
+  }
+
   // IK parameters
   int getFKInputDim() const { return FKInputDim; }
   int getFKOutputDim() const { return FKOutputDim; }
@@ -42,6 +50,9 @@ protected:
 
   void train_adolc();
   void train_adolc_test();
+
+  double* input, * output, * jacobian;
+  double** jRow;
 };
 
 #endif

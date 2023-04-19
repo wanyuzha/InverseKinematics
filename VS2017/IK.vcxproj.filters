@@ -90,6 +90,9 @@
     <ClCompile Include="..\skeletonRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\quaternion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\minivectorTemplate.h">
@@ -196,6 +199,12 @@
     </ClInclude>
     <ClInclude Include="..\vega\transform4d.h">
       <Filter>Vega</Filter>
+    </ClInclude>
+    <ClInclude Include="..\quaternion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dual_quaternion.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

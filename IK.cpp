@@ -135,6 +135,16 @@ IK::IK(int numIKJoints, const int * IKJointIDs, FK * inputFK, int adolc_tagID)
   FKInputDim = fk->getNumJoints() * 3;
   FKOutputDim = numIKJoints * 3;
 
+  // setting step
+  input = new double[FKInputDim];
+  output = new double[FKOutputDim];
+  jacobian = new double[FKOutputDim * FKInputDim];
+  jRow = new double* [FKOutputDim];
+  for (int i = 0; i < FKOutputDim; i++)
+  {
+      jRow[i] = &jacobian[FKInputDim * i];
+  }
+
   train_adolc();
 }
 
@@ -208,15 +218,7 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
     // Note that at entry, "jointEulerAngles" contains the input Euler angles. 
     // Upon exit, jointEulerAngles should contain the new Euler angles.
     
-    // setting step
-    double* input = new double[FKInputDim];
-    double* output = new double[FKOutputDim];
-    double* jacobian = new double[FKOutputDim * FKInputDim];
-    double** jRow = new double* [FKOutputDim];
-    for (int i = 0; i < FKOutputDim; i++)
-    {
-        jRow[i] = &jacobian[FKInputDim * i];
-    }
+    
 
     int N = 5;
     for (int step = 0; step < N; step++)
@@ -257,9 +259,5 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
         }
     }
 
-  delete[] input;
-  delete[] output;
-  delete[] jacobian;
-  delete[] jRow;
 }
 

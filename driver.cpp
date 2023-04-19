@@ -95,6 +95,7 @@ static void updateSkinnedMesh()
   fk->computeJointTransforms();
 
   skinning->applySkinning(fk->getJointSkinTransforms(), newPosv);
+  //skinning->applyDualQuaternionSkinning(fk->getJointSkinTransforms(), newPosv, fk->getNumJoints());
   for(size_t i = 0; i < mesh->getNumVertices(); i++)
     mesh->setPosition(i, newPos[i]);
 

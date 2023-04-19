@@ -26,6 +26,13 @@ public:
   // output: newMeshVertexPositions (length is 3*numMeshVertices)
   void applySkinning(const RigidTransform4d * jointSkinTransforms, double * newMeshVertexPositions) const;
 
+  // Main routine: Apply skinning to produce the new positions of the mesh vertices.
+  // jointSkinTransforms is an array of transformations, one per joint. For each joint, we have: 
+  // jointSkinTransform = globalTransform * globalRestTransform^{-1}
+  // input: jointSkinTransforms
+  // output: newMeshVertexPositions (length is 3*numMeshVertices)
+  void applyDualQuaternionSkinning(const RigidTransform4d* jointSkinTransforms, double* newMeshVertexPositions, int numJoints) const;
+
 protected:
   int numMeshVertices = 0;
   const double * restMeshVertexPositions = nullptr; // length of array is 3 x numMeshVertices

@@ -4,6 +4,8 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+#include "dual_quaternion.h"
+
 using namespace std;
 
 // CSCI 520 Computer Animation and Simulation
@@ -98,5 +100,57 @@ void Skinning::applySkinning(const RigidTransform4d * jointSkinTransforms, doubl
     newMeshVertexPositions[3 * vtxID + 1] = skinVec[1];
     newMeshVertexPositions[3 * vtxID + 2] = skinVec[2];
   }
+}
+
+void Skinning::applyDualQuaternionSkinning(const RigidTransform4d* jointSkinTransforms, double* newMeshVertexPositions, int numJoints) const
+{
+    // transform jointSkinTransforms to dual quaternion
+    // get rotation matrix and translation vector
+    // iterate joints
+    std::vector<Dual_quaternion> duals(numJoints);
+    for (int i = 0; i < numJoints; i++)
+    {
+        duals[i] = Dual_quaternion(jointSkinTransforms[i].getRotation(), jointSkinTransforms[i].getTranslation());
+    }
+    // blend weights
+    for (int vtxID = 0; vtxID < numMeshVertices; vtxID++)
+    {
+        newMeshVertexPositions[3 * vtxID + 0] = 0;
+        newMeshVertexPositions[3 * vtxID + 1] = 0;
+        newMeshVertexPositions[3 * vtxID + 2] = 0;
+        Vec4d restVecHomogeneous = { restMeshVertexPositions[3 * vtxID + 0], restMeshVertexPositions[3 * vtxID + 1], restMeshVertexPositions[3 * vtxID + 2], 1 };
+        Vec4d skinVec = { 0, 0, 0, 0 };
+        // use meshSkinningJoints and meshSkinningWeights to update weights
+
+        int pivotID = meshSkinningJoints[vtxID * numJointsInfluencingEachVertex];
+        Quaternion<double> q0 = duals[pivotID].rotation();
+        Dual_quaternion dq_blend = Dual_quaternion();
+        for (int i = 0; i < numJointsInfluencingEachVertex; i++)
+        {
+            int tempID = meshSkinningJoints[vtxID * numJointsInfluencingEachVertex + i];
+            double tempWeight = meshSkinningWeights[vtxID * numJointsInfluencingEachVertex + i];
+
+            if (tempWeight > 0.0)
+            {
+                if (q0.dot(duals[tempID].rotation()) < 0)
+                {
+                    tempWeight = -tempWeight;
+                }
+                //skinVec += tempWeight * jointSkinTransforms[tempID] * restVecHomogeneous;
+                dq_blend = dq_blend + duals[tempID] * tempWeight;
+            }
+        }
+
+        Mat3d rotation;
+        Vec3d translation;
+        dq_blend.to_transformation(rotation, translation);
+        RigidTransform4d finalTransformation = RigidTransform4d(rotation, translation);
+        skinVec = finalTransformation * restVecHomogeneous;
+
+        newMeshVertexPositions[3 * vtxID + 0] = skinVec[0];
+        newMeshVertexPositions[3 * vtxID + 1] = skinVec[1];
+        newMeshVertexPositions[3 * vtxID + 2] = skinVec[2];
+    }
+    // transform dual quaternion back to vertex
 }
 
