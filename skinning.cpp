@@ -93,6 +93,7 @@ void Skinning::applySkinning(const RigidTransform4d * jointSkinTransforms, doubl
         
         if (tempWeight > 0.0)
         {
+            // the skinVec[3] still be 1, no need to normalize
             skinVec += tempWeight * jointSkinTransforms[tempID] * restVecHomogeneous;
         }
     }
@@ -144,6 +145,7 @@ void Skinning::applyDualQuaternionSkinning(const RigidTransform4d* jointSkinTran
         Mat3d rotation;
         Vec3d translation;
         dq_blend.to_transformation(rotation, translation);
+        // transform dual quaternion to mat4d
         RigidTransform4d finalTransformation = RigidTransform4d(rotation, translation);
         skinVec = finalTransformation * restVecHomogeneous;
 

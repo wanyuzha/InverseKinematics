@@ -16,7 +16,7 @@ public:
 		_quat_e = Quaternion<double>();
 	}
 
-
+	// Set Vec3d to _quat_e_
 	Dual_quaternion(Mat3d rotation, Vec3d t)
 	{
 		_quat_0 = Quaternion<double>::Matrix2Quaternion(rotation.data());
@@ -45,6 +45,7 @@ public:
 
 	void to_transformation(Mat3d& rotation, Vec3d& t)
 	{
+		// need normalize before transform it back to Mat4d
 		double R[9];
 		double norm = _quat_0.Norm();
 		_quat_0.Normalize();
@@ -64,18 +65,19 @@ public:
 
 	Quaternion<double> rotation() { return _quat_0; }
 	Quaternion<double> translation() { return _quat_e; }
-
+	// for convenience when performs q = q + w * q0
 	Dual_quaternion operator*(double scalar)
 	{
 		return Dual_quaternion(scalar * _quat_0, scalar * _quat_e);
 	}
-
+	// for convenience when performs q = q + w * q0
 	Dual_quaternion operator+(Dual_quaternion q)
 	{
 		return Dual_quaternion(_quat_0 + q._quat_0, _quat_e + q._quat_e);
 	}
 
 protected:
+	// basicaly using everything from quaternion.h
 	Quaternion<double> _quat_0, _quat_e;
 };
 

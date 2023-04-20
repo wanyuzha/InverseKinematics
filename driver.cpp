@@ -85,6 +85,11 @@ static AveragingBuffer fpsBuffer(5);
 static vector<int> IKJointIDs;
 static vector<Vec3d> IKJointPos;
 
+enum SkinningSolver {LBS, DQS};
+
+static SkinningSolver skinSolver = SkinningSolver::LBS;
+static IKSolver ikSolver = IKSolver::TIK;
+
 //======================= Functions =============================
 
 static void updateSkinnedMesh()
@@ -94,8 +99,10 @@ static void updateSkinnedMesh()
 
   fk->computeJointTransforms();
 
-  skinning->applySkinning(fk->getJointSkinTransforms(), newPosv);
-  //skinning->applyDualQuaternionSkinning(fk->getJointSkinTransforms(), newPosv, fk->getNumJoints());
+  if(skinSolver == SkinningSolver::LBS)
+    skinning->applySkinning(fk->getJointSkinTransforms(), newPosv);
+  else if (skinSolver == SkinningSolver::DQS)
+    skinning->applyDualQuaternionSkinning(fk->getJointSkinTransforms(), newPosv, fk->getNumJoints());
   for(size_t i = 0; i < mesh->getNumVertices(); i++)
     mesh->setPosition(i, newPos[i]);
 
@@ -136,7 +143,7 @@ static void idleFunction()
   const int maxIKIters = 10;
   const double maxOneStepDistance = modelRadius / 1000;
 
-  ik->doIK(IKJointPos.data(), fk->getJointEulerAngles());
+  ik->doIK(IKJointPos.data(), fk->getJointEulerAngles(), ikSolver);
 
   updateSkinnedMesh();
 
@@ -604,6 +611,14 @@ int main (int argc, char ** argv)
   }
  
   configFilename = argv[1];
+
+  if (argc = numFixedArgs + 2)
+  {
+      if (strcmp(argv[2], "LBS") == 0)  skinSolver = SkinningSolver::LBS;
+      if (strcmp(argv[2], "DQS") == 0)  skinSolver = SkinningSolver::DQS;
+      if (strcmp(argv[3], "TIK") == 0)  ikSolver = IKSolver::TIK;
+      if (strcmp(argv[3], "PSEUDO") == 0)   ikSolver = IKSolver::PSEUDO;
+  }
 
   initConfigurations();
 

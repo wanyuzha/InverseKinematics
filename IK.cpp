@@ -164,6 +164,7 @@ void IK::train_adolc()
         eulerAngles[i] <<= 0.0;
     }
     vector<adouble> handlePositions(FKOutputDim);
+    // same as forward method in FK.cpp
     forwardKinematicsFunction(numIKJoints, IKJointIDs, *fk, eulerAngles, handlePositions);
     vector<double> output(FKOutputDim);
     for (int i = 0; i < FKOutputDim; i++)
@@ -204,7 +205,7 @@ void IK::train_adolc_test()
 
 }
 
-void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
+void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles, IKSolver ikSolver)
 {
     // You may find the following helpful:
     int numJoints = fk->getNumJoints(); // Note that is NOT the same as numIKJoints!
@@ -220,45 +221,65 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles)
     
     
 
-    int N = 5;
-    for (int step = 0; step < N; step++)
+    double maximum_distance = 0.5;
+
+    for (int i = 0; i < numJoints; i++)
     {
-        for (int i = 0; i < numJoints; i++)
-        {
-            input[i * 3] = jointEulerAngles[i][0];
-            input[i * 3 + 1] = jointEulerAngles[i][1];
-            input[i * 3 + 2] = jointEulerAngles[i][2];
-        }
+        input[i * 3] = jointEulerAngles[i][0];
+        input[i * 3 + 1] = jointEulerAngles[i][1];
+        input[i * 3 + 2] = jointEulerAngles[i][2];
+    }
 
-        ::function(adolc_tagID, FKOutputDim, FKInputDim, input, output);
-        Eigen::VectorXd b(FKOutputDim);
-        for (int i = 0; i < numIKJoints; i++)
-        {
-            b(i * 3) = (targetHandlePositions[i][0] - output[i * 3])/N;
-            b(i * 3 + 1) = (targetHandlePositions[i][1] - output[i * 3 + 1])/N;
-            b(i * 3 + 2) = (targetHandlePositions[i][2] - output[i * 3 + 2])/N;
-        }
+    // use adolc to get output
+    ::function(adolc_tagID, FKOutputDim, FKInputDim, input, output);
+    Eigen::VectorXd b(FKOutputDim);
+    for (int i = 0; i < numIKJoints; i++)
+    {
+        b(i * 3) = (targetHandlePositions[i][0] - output[i * 3]);
+        b(i * 3 + 1) = (targetHandlePositions[i][1] - output[i * 3 + 1]);
+        b(i * 3 + 2) = (targetHandlePositions[i][2] - output[i * 3 + 2]);
+    }
+    // scale it to maximum value
+    double maximum_value = 0.0;
+    for (int i = 0; i < numIKJoints * 3; i++)
+    {
+        if (abs(b(i)) > maximum_value)
+            maximum_value = abs(b(i));
+    }
+    if (maximum_value > maximum_distance)
+    {
+        double portion = maximum_distance / maximum_value;
 
-        ::jacobian(adolc_tagID, FKOutputDim, FKInputDim, input, jRow);
-
-        Eigen::MatrixXd J(FKOutputDim, FKInputDim);
-        for (int i = 0; i < FKOutputDim; i++)
+        for (int i = 0; i < numIKJoints * 3; i++)
         {
-            for (int j = 0; j < FKInputDim; j++)
-            {
-                J(i, j) = jacobian[i * FKInputDim + j];
-            }
-        }
-        Eigen::MatrixXd A = J.transpose() * J + 0.001 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
-        Eigen::VectorXd x = A.ldlt().solve(J.transpose() * b);
-        //Eigen::VectorXd x = J.transpose() * (J * J.transpose()).inverse() * b;
-        for (int i = 0; i < numJoints; i++)
-        {
-            jointEulerAngles[i][0] += x(i * 3);
-            jointEulerAngles[i][1] += x(i * 3 + 1);
-            jointEulerAngles[i][2] += x(i * 3 + 2);
+            b(i) = b(i) * portion;
         }
     }
 
+    // get jacobian matrix 
+    ::jacobian(adolc_tagID, FKOutputDim, FKInputDim, input, jRow);
+
+    Eigen::MatrixXd J(FKOutputDim, FKInputDim);
+    for (int i = 0; i < FKOutputDim; i++)
+    {
+        for (int j = 0; j < FKInputDim; j++)
+        {
+            J(i, j) = jacobian[i * FKInputDim + j];
+        }
+    }
+    Eigen::MatrixXd A = J.transpose() * J + 0.008 * Eigen::MatrixXd::Identity(FKInputDim, FKInputDim);
+    Eigen::VectorXd x;
+    // different IK methods
+    if(ikSolver == IKSolver::TIK)
+        x = A.ldlt().solve(J.transpose() * b);
+    else if(ikSolver == IKSolver::PSEUDO)
+        x = J.transpose() * (J * J.transpose()).inverse() * b;
+    // writing back euler angles
+    for (int i = 0; i < numJoints; i++)
+    {
+        jointEulerAngles[i][0] += x(i * 3);
+        jointEulerAngles[i][1] += x(i * 3 + 1);
+        jointEulerAngles[i][2] += x(i * 3 + 2);
+    }
 }
 

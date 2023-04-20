@@ -218,9 +218,10 @@ void FK::computeLocalAndGlobalTransforms(
   for (int i = 0; i < jointUpdateOrder.size(); i++)
   {
       double orientRotationMatrix[9], localRotationMatrix[9];
-      // parent joint
+      // root joint
       if (i == 0)
       {
+          // first get orient and euler angles and multiply matrix
           euler2Rotation(jointOrientationEulerAngles[i], orientRotationMatrix, RotateOrder::XYZ);
           euler2Rotation(eulerAngles[i], localRotationMatrix, rotateOrders[i]);
           RigidTransform4d rootTransform4d = RigidTransform4d(Mat3d(orientRotationMatrix) * Mat3d(localRotationMatrix), translations[i]);
@@ -229,10 +230,12 @@ void FK::computeLocalAndGlobalTransforms(
       }
       else
       {
+          // first get orient and euler angles and multiply matrix
           euler2Rotation(jointOrientationEulerAngles[i], orientRotationMatrix, RotateOrder::XYZ);
           euler2Rotation(eulerAngles[i], localRotationMatrix, rotateOrders[i]);
           localTransforms[i] = RigidTransform4d(Mat3d(orientRotationMatrix) * Mat3d(localRotationMatrix), translations[i]);
           int jointParent = jointParents[i];
+          // after local transformation, multiply it with global transformation 
           globalTransforms[i] = globalTransforms[jointParent] * localTransforms[i];
       }
   }
