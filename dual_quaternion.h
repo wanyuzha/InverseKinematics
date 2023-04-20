@@ -16,7 +16,7 @@ public:
 		_quat_e = Quaternion<double>();
 	}
 
-	// Set Vec3d to _quat_e_
+	// Set Vec3d to _quat_e_ using the formula
 	Dual_quaternion(Mat3d rotation, Vec3d t)
 	{
 		_quat_0 = Quaternion<double>::Matrix2Quaternion(rotation.data());
@@ -26,7 +26,7 @@ public:
 		double z = 0.5f * (t[0] * _quat_0.Gety() - t[1] * _quat_0.Getx() + t[2] * _quat_0.Gets());
 		_quat_e = Quaternion<double>(s, x, y, z);
 	}
-
+	// This is simply the copy version of previous 
 	Dual_quaternion(const Quaternion<double>& q, Vec3d t)
 	{
 		_quat_0 = q;

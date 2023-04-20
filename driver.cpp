@@ -611,11 +611,15 @@ int main (int argc, char ** argv)
   }
  
   configFilename = argv[1];
-
-  if (argc = numFixedArgs + 2)
+  // read the second input
+  if (argc > numFixedArgs)
   {
       if (strcmp(argv[2], "LBS") == 0)  skinSolver = SkinningSolver::LBS;
       if (strcmp(argv[2], "DQS") == 0)  skinSolver = SkinningSolver::DQS;
+  }
+  // read the third input
+  if (argc == numFixedArgs + 2)
+  {
       if (strcmp(argv[3], "TIK") == 0)  ikSolver = IKSolver::TIK;
       if (strcmp(argv[3], "PSEUDO") == 0)   ikSolver = IKSolver::PSEUDO;
   }

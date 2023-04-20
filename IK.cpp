@@ -86,6 +86,7 @@ void forwardKinematicsFunction(
           orientEulerAngles[0] = tempD[0]; orientEulerAngles[1] = tempD[1]; orientEulerAngles[2] = tempD[2];
 
           orientRotationMatrix = Euler2Rotation(orientEulerAngles, RotateOrder::XYZ);
+          // use i*3 because the given input is a flat vector
           real eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3+1] , eulerAngles[i*3+2]};
           localRotationMatrix = Euler2Rotation(eulerA, fk.getJointRotateOrder(i));
 
@@ -100,6 +101,7 @@ void forwardKinematicsFunction(
           orientEulerAngles[0] = tempD[0]; orientEulerAngles[1] = tempD[1]; orientEulerAngles[2] = tempD[2];
 
           orientRotationMatrix = Euler2Rotation(orientEulerAngles, RotateOrder::XYZ);
+          // use i*3 because the given input is a flat vector
           real eulerA[3] = { eulerAngles[i*3] , eulerAngles[i*3 + 1] , eulerAngles[i*3 + 2] };
           localRotationMatrix = Euler2Rotation(eulerA, fk.getJointRotateOrder(i));
 
@@ -108,6 +110,7 @@ void forwardKinematicsFunction(
           localTranslationAdouble[0] = tempD[0]; localTranslationAdouble[1] = tempD[1]; localTranslationAdouble[2] = tempD[2];
 
           int jointParent = fk.getJointParent(i);
+          // don't have to combine rotation and translation into mat4d, just use this function instead
           multiplyAffineTransform4ds(globalRotationMatrixAdouble[jointParent], globalTranslationAdouble[jointParent], orientRotationMatrix * localRotationMatrix,
               localTranslationAdouble, globalRotationMatrixAdouble[i], globalTranslationAdouble[i]);
       }
@@ -248,6 +251,7 @@ void IK::doIK(const Vec3d* targetHandlePositions, Vec3d* jointEulerAngles, IKSol
     }
     if (maximum_value > maximum_distance)
     {
+        // find the portion to transform the maximum original value to maximum limitation, under which circumstances all distances are under constraints.
         double portion = maximum_distance / maximum_value;
 
         for (int i = 0; i < numIKJoints * 3; i++)

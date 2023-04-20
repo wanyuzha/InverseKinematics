@@ -133,6 +133,7 @@ void Skinning::applyDualQuaternionSkinning(const RigidTransform4d* jointSkinTran
 
             if (tempWeight > 0.0)
             {
+                // flip the sign of dual quaternion, this is to ensure we find two dq with cloest distances
                 if (q0.dot(duals[tempID].rotation()) < 0)
                 {
                     tempWeight = -tempWeight;
@@ -142,6 +143,7 @@ void Skinning::applyDualQuaternionSkinning(const RigidTransform4d* jointSkinTran
             }
         }
 
+        // get rotation and tranlation from dual quaternion
         Mat3d rotation;
         Vec3d translation;
         dq_blend.to_transformation(rotation, translation);
